@@ -21,6 +21,9 @@
 package org.anti_ad.mc.ipnext.event
 
 import com.yevdo.jwildcard.JWildcard
+import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.item.ItemStack
 import org.anti_ad.mc.ipnext.Log
@@ -433,6 +436,48 @@ object LockedSlotKeeper {
                 emptyNonLockedSlots.add(fromSlot)
             }
         }
+    }
+
+    fun steerPickFromBlock(pos: BlockPos, includeData: Boolean): Boolean {
+        val level = Vanilla.mc().level
+        return level != null && steerPickAwayFromLockedSlots(level.getBlockState(pos).getCloneItemStack(level, pos, includeData))
+    }
+
+    fun steerPickFromEntity(entity: Entity): Boolean {
+        return steerPickAwayFromLockedSlots(entity.pickResult)
+    }
+
+    /**
+     * Pick block is resolved on the server. When the picked item is in the main inventory (or the player has infinite
+     * materials and doesn't have it at all) the server swaps it into Inventory.getSuitableHotbarSlot(), which doesn't know
+     * about locked slots. Before the pick packet is sent we select an unlocked hotbar slot the server will choose instead.
+     * Returns true when the selected slot was changed and has to be sent to the server.
+     */
+    private fun steerPickAwayFromLockedSlots(picked: ItemStack?): Boolean {
+        var changed = false
+        if (Features.ENABLE_LOCK_SLOTS.booleanValue && LockedSlotsSettings.LOCKED_SLOTS_PROTECT_FROM_PICK_BLOCK.booleanValue && picked != null && !picked.isEmpty) {
+            val player = Vanilla.player()
+            val inventory = player.inventory
+            val found = inventory.findSlotMatchingItem(picked)
+            if ((found != -1 && !Inventory.isHotbarSlot(found)) || (found == -1 && player.hasInfiniteMaterials())) {
+                val selected = inventory.`(selectedSlot)`
+                if (LockSlotsHandler.isSlotLocked(suitableHotbarSlot(inventory, selected))) {
+                    val target = (0..8).map { (selected + it) % 9 }.firstOrNull { !LockSlotsHandler.isSlotLocked(it) && suitableHotbarSlot(inventory, it) == it }
+                    if (target != null) {
+                        Log.trace("Pick block would replace locked hotbar slot, selecting $target instead")
+                        inventory.`(selectedSlot)` = target
+                        changed = true
+                    }
+                }
+            }
+        }
+        return changed
+    }
+
+    // mirrors Inventory.getSuitableHotbarSlot() as if `selected` were the selected slot
+    private fun suitableHotbarSlot(inventory: Inventory, selected: Int): Int {
+        val hotbar = (0..8).map { (selected + it) % 9 }
+        return hotbar.firstOrNull { inventory.getItem(it).isEmpty } ?: hotbar.firstOrNull { !inventory.getItem(it).isEnchanted } ?: selected
     }
 
     fun isOnlyHotbarFree(): Boolean {

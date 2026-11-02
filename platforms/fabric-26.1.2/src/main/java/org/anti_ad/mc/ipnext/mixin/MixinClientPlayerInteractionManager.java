@@ -30,12 +30,16 @@ import org.anti_ad.mc.ipnext.event.ClientEventHandler;
 import org.anti_ad.mc.ipnext.event.CuttersDispatcher;
 import org.anti_ad.mc.ipnext.event.LockedSlotKeeper;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MultiPlayerGameMode.class)
 public class MixinClientPlayerInteractionManager {
+
+    @Shadow
+    private void ensureHasSentCarriedItem() {}
 
     @Inject(at = @At("HEAD"), method = "handleContainerInput(IIILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V", cancellable = true)
     public void clickSlotPre(int containerId, int slotNum, int buttonNum, ContainerInput containerInput, Player player, CallbackInfo ci) {
@@ -60,11 +64,17 @@ public class MixinClientPlayerInteractionManager {
 
     @Inject(at = @At("HEAD"), method = "handlePickItemFromBlock")
     public void pickFromInventory(BlockPos pos, boolean includeData, CallbackInfo ci) {
+        if (LockedSlotKeeper.INSTANCE.steerPickFromBlock(pos, includeData)) {
+            ensureHasSentCarriedItem();
+        }
         LockedSlotKeeper.INSTANCE.ignoredSelectedHotbarSlot(-1);
     }
 
     @Inject(at = @At("HEAD"), method = "handlePickItemFromEntity")
     public void pickFromInventory(Entity entity, boolean includeData, CallbackInfo ci) {
+        if (LockedSlotKeeper.INSTANCE.steerPickFromEntity(entity)) {
+            ensureHasSentCarriedItem();
+        }
         LockedSlotKeeper.INSTANCE.ignoredSelectedHotbarSlot(-1);
     }
 }

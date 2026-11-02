@@ -25,12 +25,16 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import org.anti_ad.mc.ipnext.event.LockedSlotKeeper;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MultiPlayerGameMode.class)
 public class MixinPlayerController {
+
+    @Shadow
+    private void ensureHasSentCarriedItem() {}
 
     @Inject(at = @At("HEAD"), method = "handleCreativeModeItemAdd(Lnet/minecraft/world/item/ItemStack;I)V")
     public void clickCreativeStack(ItemStack stack, int slotId, CallbackInfo ci) {
@@ -39,11 +43,17 @@ public class MixinPlayerController {
 
     @Inject(at = @At("HEAD"), method = "handlePickItemFromBlock")
     public void pickItem(BlockPos pos, boolean sentData, CallbackInfo ci) {
+        if (LockedSlotKeeper.INSTANCE.steerPickFromBlock(pos, sentData)) {
+            ensureHasSentCarriedItem();
+        }
         LockedSlotKeeper.INSTANCE.ignoredSelectedHotbarSlot(-1);
     }
 
     @Inject(at = @At("HEAD"), method = "handlePickItemFromEntity")
     public void pickItem(Entity entity, boolean sentData, CallbackInfo ci) {
+        if (LockedSlotKeeper.INSTANCE.steerPickFromEntity(entity)) {
+            ensureHasSentCarriedItem();
+        }
         LockedSlotKeeper.INSTANCE.ignoredSelectedHotbarSlot(-1);
     }
 

@@ -321,6 +321,7 @@ object LockedSlotsSettings : ConfigDeclaration {
     val ENABLE_LOCK_SLOTS_PER_SERVER                    /**/ by bool(true)
     val LOCKED_SLOTS_DISABLE_QUICK_MOVE_THROW           /**/ by bool(true)
     val LOCKED_SLOTS_DISABLE_THROW_FOR_NON_STACKABLE    /**/ by bool(true)
+    val LOCKED_SLOTS_PROTECT_FROM_PICK_BLOCK            /**/ by bool(true)
     val LOCK_SLOTS_DISABLE_USER_INTERACTION             /**/ by keyToggleBool(ConfigScreenSettings, false, KeybindSettings.GUI_DEFAULT)
 
         .CATEGORY("$category.lock_slots.empty")
