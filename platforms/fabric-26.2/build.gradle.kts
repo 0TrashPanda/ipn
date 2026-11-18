@@ -45,6 +45,17 @@ repositories {
             includeGroup("maven.modrinth")
         }
     }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Masa"
+                url = URI("https://masa.dy.fi/maven")
+            }
+        }
+        filter {
+            includeGroup("carpet")
+        }
+    }
 }
 
 
